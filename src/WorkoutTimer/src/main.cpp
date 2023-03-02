@@ -55,6 +55,10 @@ void setup() {
 
   // init the socket server
   socketServer.init(workoutTimer, timerFrame);
+
+  // for testing
+  workoutTimer.setEmom(5, 20);
+  workoutTimer.start(millis());
 }
 
 void loop() {
