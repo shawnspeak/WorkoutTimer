@@ -1,17 +1,34 @@
 #include <WebsocketServer.h>
 #include <WorkoutTimer.h>
 
+#include <SafeString.h>
+
 WebsocketServer::WebsocketServer() {
     _server = new AsyncWebServer(80);
     _ws = new AsyncWebSocket("/ws");
 }
 
-String message = "";
-String state = "testing";
+// buffers for command messages and arguments
+createSafeString(stringBuffer, 50);
+createSafeString(command, 10);
+createSafeString(arg1, 10);
+createSafeString(arg2, 10);
+createSafeString(statusBuffer, 50);
 
-void WebsocketServer::notifyClients() {  
+void WebsocketServer::notifyClients() {
   if (_ws->count() > 0) {
-    _ws->textAll(state);
+      // fill buffer with a json status string
+      statusBuffer.clear();
+      statusBuffer.printf("{\"md\":%u,\"st\":%u,\"in\":%u,\"ti\":%u,\"h\":%u,\"m\":%u,\"s\":%u}",
+        _frame->mode,
+        _frame->state,
+        _frame->interval,
+        _frame->intervals,
+        _frame->displayTime[TIME_HOURS],
+        _frame->displayTime[TIME_MINUTES],
+        _frame->displayTime[TIME_SECONDS]);
+
+    _ws->textAll(statusBuffer.c_str());
   }
 }
 
@@ -19,11 +36,63 @@ void WebsocketServer::handleWebSocketMessage(void *arg, uint8_t *data, size_t le
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    message = (char*)data;
-    Serial.print("message");
-    Serial.println(message);
+    stringBuffer = (char*)data;
 
-    // TODO: Translate message into timer command
+    // Take string data from message and parse out commands
+    int arg1Int = 0;
+    int arg2Int = 0;
+    size_t nextIdx = 0;
+    nextIdx = stringBuffer.stoken(command, nextIdx, ";");
+
+    Serial.println("Command ");
+    Serial.println(command);
+
+    if (command == "start") {
+      _timer->start(millis());
+    } 
+    else if (command == "pause") {
+      _timer->pause(millis());
+    } 
+    else if (command == "up") {
+      // parse total seconds
+      nextIdx++;
+      nextIdx = stringBuffer.stoken(arg1, nextIdx, ";");
+
+      Serial.println("Up Seconds ");
+      Serial.println(arg1);
+
+      if (arg1.toInt(arg1Int)) {
+        _timer->setUp(arg1Int);
+      }
+    }
+    else if (command == "down") {
+      // parse total seconds
+      nextIdx++;
+      nextIdx = stringBuffer.stoken(arg1, nextIdx, ";");
+
+      Serial.println("Down Seconds ");
+      Serial.println(arg1);
+
+      if (arg1.toInt(arg1Int)) {
+        _timer->setDown(arg1Int);
+      }
+    }
+    else if (command == "emom") {
+      // parse intervals and interval seconds
+      nextIdx++;
+      nextIdx = stringBuffer.stoken(arg1, nextIdx, ";");
+      nextIdx++;
+      nextIdx = stringBuffer.stoken(arg2, nextIdx, ";");
+
+      Serial.println("Intervals ");
+      Serial.println(arg1);
+      Serial.println("Interval Seconds ");
+      Serial.println(arg2);
+
+      if (arg1.toInt(arg1Int) && arg2.toInt(arg2Int)) {
+        _timer->setEmom(arg1Int, arg2Int);
+      }
+    }
   }
 }
 
@@ -55,7 +124,7 @@ void WebsocketServer::init(WorkoutTimer& timer, TimerFrame& frame) {
 void WebsocketServer::update() {
     _ws->cleanupClients();
 
-    // push a status update out to the client every 5 seconds
+    // push a status update out to the clients every 5 seconds
     if (_last + 5000 < millis()) {
       _last = millis();
       notifyClients();

@@ -15,7 +15,19 @@ void TimerDisplay::init() {
 	_lcd->clear();
 }
 
+uint8_t lastMode = 0;
+uint8_t lastState = 0;
+uint8_t lastInterval = 0;
+
 void TimerDisplay::update(TimerFrame& frame) {
+
+    // clear the display if we need to
+    if ((lastMode != frame.mode) ||
+        (lastState != frame.state) ||
+        (lastInterval != frame.interval)) {
+            _lcd->clear();
+        }
+
     // set the cursor to column 0, line 1
     // (note: line 1 is the second row, since counting begins with 0):
 
@@ -63,4 +75,8 @@ void TimerDisplay::update(TimerFrame& frame) {
 
     _lcd->setCursor(9, 1);
     _lcd->printf("%u/%u", frame.interval, frame.intervals);
+
+    lastMode = frame.mode;
+    lastState = frame.state;
+    lastInterval = frame.interval;
 }
