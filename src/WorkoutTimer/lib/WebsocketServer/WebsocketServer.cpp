@@ -3,8 +3,8 @@
 
 #include <SafeString.h>
 
-WebsocketServer::WebsocketServer() {
-    _server = new AsyncWebServer(80);
+WebsocketServer::WebsocketServer(AsyncWebServer* server) {
+    _server = server;
     _ws = new AsyncWebSocket("/ws");
 }
 
@@ -118,7 +118,6 @@ void WebsocketServer::init(WorkoutTimer& timer, TimerFrame& frame) {
     }
   });
   _server->addHandler(_ws);
-  _server->begin();
 }
 
 void WebsocketServer::update() {
