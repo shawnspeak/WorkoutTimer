@@ -6,7 +6,7 @@
 
 class WebsocketServer {
     public:
-        WebsocketServer();
+        WebsocketServer(AsyncWebServer* server);
 
         void init(WorkoutTimer& timer, TimerFrame& frame);
 

@@ -65,7 +65,7 @@ function onMessage(event: MessageEvent) {
 onMounted(() => { 
   console.log('mounted');
 
-  websocket = new WebSocket('ws://192.168.4.99/ws');
+  websocket = new WebSocket('ws://' + window.location.host + '/ws');
   websocket.onopen    = onOpen;
   websocket.onclose   = onClose;
   websocket.onmessage = onMessage;

@@ -3,6 +3,7 @@
 
 #include <WorkoutTimer.h>
 #include <TimerDisplay.h>
+#include <RemoteWebServer.h>
 #include <WebsocketServer.h>
 
 // Workout timer logic and frame to exchange timer state
@@ -12,8 +13,14 @@ TimerFrame timerFrame;
 // Timer display
 TimerDisplay timerDisplay;
 
+// Webserver to handle http and websocket requests
+AsyncWebServer server(80);
+
 // Websocker Server to deal with timer commands
-WebsocketServer socketServer;
+WebsocketServer socketServer(&server);
+
+// Web server to host remote control
+RemoteWebServer remoteServer(&server);
 
 void setup() {
   // start serial
@@ -22,7 +29,6 @@ void setup() {
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
-  AsyncWebServer server(80);
   DNSServer dns;
   AsyncWiFiManager wifiManager(&server,&dns);
 
@@ -33,10 +39,9 @@ void setup() {
   //wifiManager.resetSettings();
 
   // tries to connect to last known settings
-  // if it does not connect it starts an access point with the specified name
-  // here  "AutoConnectAP" with password "password"
+  // if it does not connect it starts an access point
   // and goes into a blocking loop awaiting configuration
-  if (!wifiManager.autoConnect("AutoConnectAP", "asdf1234")) {
+  if (!wifiManager.autoConnect("WorkoutTimerConfig", "asdf1234")) {
     Serial.println("failed to connect, we should reset as see if it connects");
     delay(3000);
     ESP.reset();
@@ -53,8 +58,12 @@ void setup() {
   // initialize display
   timerDisplay.init();
 
-  // init the socket server
+  // init the remote and socket server
   socketServer.init(workoutTimer, timerFrame);
+  remoteServer.init();
+
+  // start the webserver
+  server.begin();
 }
 
 void loop() {
