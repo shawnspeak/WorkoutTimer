@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "WorkoutTimer",
+			"path": "WorkoutTimer"
+		},
+		{
+			"path": "TimerRemote"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"chrono": "cpp"
+		}
+	}
+}
