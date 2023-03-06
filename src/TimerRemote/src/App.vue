@@ -18,6 +18,11 @@ import SetUpDown from './components/SetUpDown.vue'
 import SetEmom from './components/SetEmom.vue'
 import StatusControl from './components/StatusControl.vue'
 
+let wsUrl = 'ws://' + window.location.host + '/ws';
+if (import.meta.env.MODE !== 'production') {
+  wsUrl = 'ws://192.168.4.99/ws'; // for testing
+}
+
 const state = ref('menu');
 const status = ref({});
 let websocket: WebSocket;
@@ -49,12 +54,19 @@ function cancelSet(cmd: string) {
   state.value = 'menu';
 }
 
+function checkWebsocket() {
+  if (!websocket || websocket.readyState === WebSocket.CLOSED) {
+    startWebsocket();
+  }
+}
+
 function onOpen(event: Event) {
   console.log('Connection opened');
 }
 
 function onClose(event: Event) {
   console.log('Connection closed');
+  checkWebsocket();
 }
 
 function onMessage(event: MessageEvent) {
@@ -62,13 +74,16 @@ function onMessage(event: MessageEvent) {
   status.value = JSON.parse(event.data);
 }
 
-onMounted(() => { 
-  console.log('mounted');
-
-  websocket = new WebSocket('ws://' + window.location.host + '/ws');
+function startWebsocket() {
+  websocket = new WebSocket(wsUrl);
   websocket.onopen    = onOpen;
   websocket.onclose   = onClose;
   websocket.onmessage = onMessage;
+}
+
+onMounted(() => { 
+  startWebsocket();
+  setInterval(checkWebsocket, 5000);
 });
 </script>
 
