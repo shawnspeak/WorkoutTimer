@@ -1,5 +1,7 @@
+#if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWiFiManager.h>
+#endif
 
 #include <WorkoutTimer.h>
 #include <TimerDisplay.h>
@@ -27,9 +29,12 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
 
+
+#if defined(ESP8266)
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
   DNSServer dns;
+
   AsyncWiFiManager wifiManager(&server,&dns);
 
   // exit after config instead of connecting
@@ -47,6 +52,7 @@ void setup() {
     ESP.reset();
     delay(5000);
   }
+#endif
 
   // if you get here you have connected to the WiFi
   Serial.println("WiFi connected. Ip address");

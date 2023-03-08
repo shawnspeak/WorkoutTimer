@@ -1,7 +1,14 @@
 #ifndef WebsocketServer_h
 #define WebsocketServer_h
 
+#if defined(ESP8266)
 #include <ESPAsyncWebServer.h>
+#endif
+
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+#include <AsyncWebServer_RP2040W.h>
+#endif
+
 #include <WorkoutTimer.h>
 
 class WebsocketServer {
