@@ -7,7 +7,11 @@ class WiFiManager {
     public:
         WiFiManager(AsyncWebServer* server);
 
-        void init();
+        bool init();
+
+        bool connected;
+
+        void update();
 
     private:
         AsyncWebServer* _server;

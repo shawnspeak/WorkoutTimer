@@ -16,6 +16,9 @@ TimerDisplay timerDisplay;
 // Webserver to handle http and websocket requests
 AsyncWebServer server(80);
 
+// wifi manager
+WiFiManager wifiManager(&server);
+
 // Websocker Server to deal with timer commands
 WebsocketServer socketServer(&server);
 
@@ -36,35 +39,37 @@ void setup() {
       Serial.println("LittleFS mounted successfully");
   }
 
-  // Local intialization. Once its business is done, there is no need to keep it around
-  WiFiManager wifiManager(&server);
-  wifiManager.init(); // will restart if needed, otherwise will be connected
+  if (wifiManager.init()) { // will restart if needed, otherwise will be connected
+    // if you get here you have connected to the WiFi
+    Serial.println("WiFi connected. Ip address");
+    Serial.println(WiFi.localIP());
 
-  // if you get here you have connected to the WiFi
-  Serial.println("WiFi connected. Ip address");
-  Serial.println(WiFi.localIP());
+    // initialize timer
+    workoutTimer.init(millis(), timerFrame);
 
-  // initialize timer
-  workoutTimer.init(millis(), timerFrame);
+    // initialize display
+    timerDisplay.init();
 
-  // initialize display
-  timerDisplay.init();
+    // init the remote and socket server
+    socketServer.init(workoutTimer, timerFrame);
+    remoteServer.init();
 
-  // init the remote and socket server
-  socketServer.init(workoutTimer, timerFrame);
-  remoteServer.init();
-
-  // start the webserver
-  server.begin();
+    // start the webserver
+    server.begin();
+  }
 }
 
 void loop() {
-  // advance the timer
-  workoutTimer.advance(millis(), timerFrame);
+  if (wifiManager.connected) {
+    // advance the timer
+    workoutTimer.advance(millis(), timerFrame);
 
-  // update the display
-  timerDisplay.update(timerFrame);
+    // update the display
+    timerDisplay.update(timerFrame);
 
-  // handle socket server updates
-  socketServer.update();
+    // handle socket server updates
+    socketServer.update();
+  } else {
+    wifiManager.update();
+  }
 }

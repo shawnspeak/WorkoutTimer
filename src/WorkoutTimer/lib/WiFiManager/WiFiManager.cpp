@@ -4,6 +4,7 @@
 WiFiManager::WiFiManager(AsyncWebServer* server) {
     _server = server;
     _restart = false;
+    connected = false;
 }
 
 const char* PARAM_INPUT_1 = "ssid";
@@ -49,36 +50,6 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
   file.close();
 }
 
-// uint8_t AsyncWiFiManager::waitForConnectResult()
-// {
-//   if (_connectTimeout == 0)
-//   {
-//     return WiFi.waitForConnectResult();
-//   }
-//   else
-//   {
-//     DEBUG_WM(F("Waiting for connection result with time out"));
-//     unsigned long start = millis();
-//     boolean keepConnecting = true;
-//     uint8_t status;
-//     while (keepConnecting)
-//     {
-//       status = WiFi.status();
-//       if (millis() > start + _connectTimeout)
-//       {
-//         keepConnecting = false;
-//         DEBUG_WM(F("Connection timed out"));
-//       }
-//       if (status == WL_CONNECTED || status == WL_CONNECT_FAILED)
-//       {
-//         keepConnecting = false;
-//       }
-//       delay(100);
-//     }
-//     return status;
-//   }
-// }
-
 // Initialize WiFi
 bool WiFiManager::initWiFi() {
   if(_ssid=="" || _pass==""){
@@ -87,13 +58,6 @@ bool WiFiManager::initWiFi() {
   }
 
   WiFi.mode(WIFI_STA);
-//   localIP.fromString(ip.c_str());
-//   localGateway.fromString(gateway.c_str());
-
-//   if (!WiFi.config(localIP, localGateway, subnet)){
-//     Serial.println("STA Failed to configure");
-//     return false;
-//   }
   WiFi.begin(_ssid.c_str(), _pass.c_str());
 
   Serial.println("Connecting to WiFi...");
@@ -108,7 +72,7 @@ bool WiFiManager::initWiFi() {
   return true;
 }
 
-void WiFiManager::init() {
+bool WiFiManager::init() {
     // try to load ssid and pass
     _ssid = readFile(LittleFS, ssidPath);
     _pass = readFile(LittleFS, passPath);
@@ -116,7 +80,9 @@ void WiFiManager::init() {
     if (initWiFi()) {
         Serial.println("Connected to WiFi...");
         Serial.println(WiFi.localIP());
-        return;
+
+        connected = true;
+        return true;
     }
 
     // host the wifi manager
@@ -134,15 +100,9 @@ void WiFiManager::init() {
     Serial.print("AP IP address: ");
     Serial.println(IP); 
 
-    // Web Server Root URL
-    _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-      request->send(LittleFS, "/wifimanager.html", "text/html");
-    });
-    
-    _server->serveStatic("/", LittleFS, "/");
-
     // Route for root / web page
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        Serial.print("Requesting config root");
         request->send(LittleFS, "/wifi-manager/index.html", "text/html", false);
     });
     
@@ -168,38 +128,24 @@ void WiFiManager::init() {
             Serial.print("Password set to: ");
             Serial.println(this->_pass);
             // Write file to save value
-            writeFile(LittleFS, passPath, this->_ssid.c_str());
+            writeFile(LittleFS, passPath, this->_pass.c_str());
           }
-        //   // HTTP POST ip value
-        //   if (p->name() == PARAM_INPUT_3) {
-        //     ip = p->value().c_str();
-        //     Serial.print("IP Address set to: ");
-        //     Serial.println(ip);
-        //     // Write file to save value
-        //     writeFile(LittleFS, ipPath, ip.c_str());
-        //   }
-        //   // HTTP POST gateway value
-        //   if (p->name() == PARAM_INPUT_4) {
-        //     gateway = p->value().c_str();
-        //     Serial.print("Gateway set to: ");
-        //     Serial.println(gateway);
-        //     // Write file to save value
-        //     writeFile(LittleFS, gatewayPath, gateway.c_str());
-        //   }
-          //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
         }
       }
       _restart = true;
       request->send(200, "text/plain", "Done. Timer will restart and connect to your WiFi");
     });
 
+    Serial.print("Starting AP Config Server");
     _server->begin(); // web server start
+    Serial.print("Started AP Config Server");
 
-    while(true)
-    {
-        delay(5000);
-        if (_restart) {
-            ESP.restart();
-        }
-    }
+   return false;
+}
+
+void WiFiManager::update() {
+  if (_restart){
+    delay(5000);
+    ESP.restart();
+  }
 }
