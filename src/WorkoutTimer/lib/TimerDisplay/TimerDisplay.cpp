@@ -62,6 +62,9 @@ void TimerDisplay::update(TimerFrame& frame) {
         case TIMER_STATE_COMPLETE: 
             _lcd->print("DONE");
             break;
+        case TIMER_STATE_PAUSE: 
+            _lcd->print("PAUSE");
+            break;
         default:
             _lcd->print("UNSET");
             break;

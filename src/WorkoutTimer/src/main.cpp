@@ -1,9 +1,9 @@
-#include <ESP8266WiFi.h>
-#include <ESPAsyncWiFiManager.h>
+#include "LittleFS.h"
 
 #include <WorkoutTimer.h>
 #include <TimerDisplay.h>
 #include <RemoteWebServer.h>
+#include <WiFiManager.h>
 #include <WebsocketServer.h>
 
 // Workout timer logic and frame to exchange timer state
@@ -16,6 +16,9 @@ TimerDisplay timerDisplay;
 // Webserver to handle http and websocket requests
 AsyncWebServer server(80);
 
+// wifi manager
+WiFiManager wifiManager(&server);
+
 // Websocker Server to deal with timer commands
 WebsocketServer socketServer(&server);
 
@@ -27,52 +30,46 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
 
-  // WiFiManager
-  // Local intialization. Once its business is done, there is no need to keep it around
-  DNSServer dns;
-  AsyncWiFiManager wifiManager(&server,&dns);
-
-  // exit after config instead of connecting
-  wifiManager.setBreakAfterConfig(true);
-
-  //reset settings - for testing
-  //wifiManager.resetSettings();
-
-  // tries to connect to last known settings
-  // if it does not connect it starts an access point
-  // and goes into a blocking loop awaiting configuration
-  if (!wifiManager.autoConnect("WorkoutTimerConfig", "asdf1234")) {
-    Serial.println("failed to connect, we should reset as see if it connects");
-    delay(3000);
-    ESP.reset();
-    delay(5000);
+  // init filesystem
+  if (!LittleFS.begin()) {
+      Serial.println("An error has occurred while mounting LittleFS");
+  }
+  else
+  {
+      Serial.println("LittleFS mounted successfully");
   }
 
-  // if you get here you have connected to the WiFi
-  Serial.println("WiFi connected. Ip address");
-  Serial.println(WiFi.localIP());
+  if (wifiManager.init()) { // will restart if needed, otherwise will be connected
+    // if you get here you have connected to the WiFi
+    Serial.println("WiFi connected. Ip address");
+    Serial.println(WiFi.localIP());
 
-  // initialize timer
-  workoutTimer.init(millis(), timerFrame);
+    // initialize timer
+    workoutTimer.init(millis(), timerFrame);
 
-  // initialize display
-  timerDisplay.init();
+    // initialize display
+    timerDisplay.init();
 
-  // init the remote and socket server
-  socketServer.init(workoutTimer, timerFrame);
-  remoteServer.init();
+    // init the remote and socket server
+    socketServer.init(workoutTimer, timerFrame);
+    remoteServer.init();
 
-  // start the webserver
-  server.begin();
+    // start the webserver
+    server.begin();
+  }
 }
 
 void loop() {
-  // advance the timer
-  workoutTimer.advance(millis(), timerFrame);
+  if (wifiManager.connected) {
+    // advance the timer
+    workoutTimer.advance(millis(), timerFrame);
 
-  // update the display
-  timerDisplay.update(timerFrame);
+    // update the display
+    timerDisplay.update(timerFrame);
 
-  // handle socket server updates
-  socketServer.update();
+    // handle socket server updates
+    socketServer.update();
+  } else {
+    wifiManager.update();
+  }
 }
