@@ -12,6 +12,7 @@
 #include "bitmap_fonts.hpp"
 #include "font6_data.hpp"
 #include "font8_data.hpp"
+#include "font_timer_data.hpp"
 #include "font14_outline_data.hpp"
 
 #include "pimoroni_common.hpp"

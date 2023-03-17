@@ -22,14 +22,15 @@ WiFiManager wifiManager(&server);
 // Websocker Server to deal with timer commands
 WebsocketServer socketServer(&server);
 
-// Web server to host remote control
-RemoteWebServer remoteServer(&server);
+// // Web server to host remote control
+// RemoteWebServer remoteServer(&server);
 
 void setup() {
   // start serial
   Serial.begin(115200);
-  Serial.println();
+  Serial.println("Hello");
 
+  delay(6000);
   // init filesystem
   if (!LittleFS.begin()) {
       Serial.println("An error has occurred while mounting LittleFS");
@@ -52,7 +53,7 @@ void setup() {
 
     // init the remote and socket server
     socketServer.init(workoutTimer, timerFrame);
-    remoteServer.init();
+    //remoteServer.init();
 
     // start the webserver
     server.begin();

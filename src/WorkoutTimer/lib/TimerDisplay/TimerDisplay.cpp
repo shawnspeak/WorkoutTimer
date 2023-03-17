@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "okcolor.hpp"
+#include <SafeString.h>
 #endif
 
 #include "TimerDisplay.h"
@@ -33,6 +34,8 @@ void TimerDisplay::init() {
 
     _graphics->set_pen(0, 0, 0);
     _graphics->clear();
+    _graphics->set_font(&fontTimer);
+    _galactic_unicorn->set_brightness(0.5F);
 #endif
 
 }
@@ -41,9 +44,18 @@ uint8_t lastMode = 0;
 uint8_t lastState = 0;
 uint8_t lastInterval = 0;
 
+int32_t y = 0;
+float s = 1.0F;
+uint8_t f = 0;
+
+unsigned long lastA = 0;
+unsigned long lastB = 0;
+unsigned long lastC = 0;
+unsigned long lastD = 0;
+
+
 #if defined(ARDUINO_RASPBERRY_PI_PICO_W)
-std::string message = "Pirate. Monkey. Robot. Ninja.";
-float scroll = -53.0f;
+createSafeString(displayBuffer, 50);
 #endif
 
 void TimerDisplay::update(TimerFrame& frame) {
@@ -109,19 +121,79 @@ void TimerDisplay::update(TimerFrame& frame) {
 #endif
 
 #if defined(ARDUINO_RASPBERRY_PI_PICO_W)
-    int width = _graphics->measure_text(message, 1);
-    scroll += 0.25f;
-
-    if(scroll > width) {
-      scroll = -53.0f;
+    displayBuffer.clear();
+    _graphics->set_pen(0, 0, 0);
+    _graphics->clear();
+    if (frame.displayTime[TIME_HOURS] > 0) {
+        //displayBuffer.printf("%02u:%02u:%02u", frame.displayTime[TIME_HOURS], frame.displayTime[TIME_MINUTES], frame.displayTime[TIME_SECONDS]);
+        displayBuffer.printf("%u:%u:%u", frame.displayTime[TIME_HOURS], frame.displayTime[TIME_MINUTES], frame.displayTime[TIME_SECONDS]);
+    } else {
+        //displayBuffer.printf("%02u:%02u", frame.displayTime[TIME_MINUTES], frame.displayTime[TIME_SECONDS]);
+        displayBuffer.printf("%02u:%02u", frame.displayTime[TIME_MINUTES], frame.displayTime[TIME_SECONDS]);
     }
+    // displayBuffer = "00:00";
+    int width = _graphics->measure_text(displayBuffer.c_str(), s);
 
-    ok_color::HSL hsl{scroll / 100.0f, 1.0f, 0.5f};
-    ok_color::RGB rgb = ok_color::okhsl_to_srgb(hsl);
-    _graphics->set_pen(rgb.r * 255, rgb.g * 255, rgb.b * 255);
-    _graphics->text(message, pimoroni::Point(0 - scroll, 5), -1, 0.55);
+    // ok_color::HSL hsl{scroll / 100.0f, 1.0f, 0.5f};
+    // ok_color::RGB rgb = ok_color::okhsl_to_srgb(hsl);
+    //_graphics->set_pen(rgb.r * 255, rgb.g * 255, rgb.b * 255);
+    _graphics->set_pen(201, 201, 201);
+    
+    _graphics->text(displayBuffer.c_str(), pimoroni::Point(26 - (width / 2), y), -1, s);
 
     _galactic_unicorn->update(_graphics);
+
+
+    if (_galactic_unicorn->is_pressed(pimoroni::GalacticUnicorn::SWITCH_A)) {
+        if (millis() > lastA + 1000) {
+            s += 0.05F;
+            lastA = millis();
+
+            Serial.printf("Scale change: %f\n", s);
+        }
+    }
+
+    if (_galactic_unicorn->is_pressed(pimoroni::GalacticUnicorn::SWITCH_B)) {
+        if (millis() > lastB + 1000) {
+            s -= 0.05F;
+            lastB = millis();
+
+            Serial.printf("Scale change: %f \n", s);
+        }
+    }
+
+    if (_galactic_unicorn->is_pressed(pimoroni::GalacticUnicorn::SWITCH_C)) {
+        if (millis() > lastC + 1000) {
+            y = (y >= 7)?-4:y+1;
+            lastC = millis();
+
+            Serial.printf("Y change: %u \n", y);
+        }
+    }
+
+    if (_galactic_unicorn->is_pressed(pimoroni::GalacticUnicorn::SWITCH_D)) {
+        if (millis() > lastD + 1000) {
+            f = (f >= 7)?0:f+1;
+            lastD = millis();
+
+            switch (f)
+            {
+                case 0: _graphics->set_font("sans"); break;
+                case 1: _graphics->set_font("bitmap6"); break;
+                case 2: _graphics->set_font("bitmap8"); break;
+                case 3: _graphics->set_font("bitmap14_outline"); break;
+                case 4: _graphics->set_font("gothic"); break;
+                case 5: _graphics->set_font("gothic"); break;
+                case 6: _graphics->set_font("serif_italic"); break;
+                case 7: _graphics->set_font("serif"); break;
+                default:
+                    break;
+            }
+
+            Serial.printf("Font change: %u \n", f);
+        }
+    }
+
 #endif
 
     lastMode = frame.mode;
