@@ -139,7 +139,7 @@ void WebsocketServer::init(WorkoutTimer& timer, TimerFrame& frame) {
     }
   });
   _server->addHandler(_ws);
-  _server->on("/", handleRoot);
+  // _server->on("/", handleRoot);
 }
 
 void WebsocketServer::update() {

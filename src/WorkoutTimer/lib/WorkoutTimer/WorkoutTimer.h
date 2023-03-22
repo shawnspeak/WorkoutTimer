@@ -30,7 +30,7 @@ struct TimerFrame {
     uint8_t displayTime[3]; // time to display
     uint8_t interval; // current interval
 
-    uint8_t countdown; // countdown
+    int8_t countdown; // countdown
     uint8_t intervals; // number of intervals
     uint8_t intervalTime[3]; // interval time
 };
@@ -58,6 +58,8 @@ class WorkoutTimer {
     private:
         void reset();
         bool isRunComplete(uint64_t at);
+        bool isInCountdown(uint64_t at);
+        int8_t determineCountdown(uint64_t at);
         void determineDisplay(uint64_t milliseconds, uint8_t time[]);
         uint8_t determineInterval(uint64_t milliseconds);
 

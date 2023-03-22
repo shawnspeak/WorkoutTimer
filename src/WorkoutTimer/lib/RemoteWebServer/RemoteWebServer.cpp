@@ -1,16 +1,16 @@
 #include <RemoteWebServer.h>
-#include "LittleFS.h"
 
-RemoteWebServer::RemoteWebServer(AsyncWebServer* server) {
+RemoteWebServer::RemoteWebServer(AsyncWebServer* server, FS* fs) 
+{
     _server = server;
+    _fs = fs;
 }
 
-
-void RemoteWebServer::init() {
-    // Route for root / web page
-    _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(LittleFS, "/remote/index.html", "text/html", false);
+void RemoteWebServer::init() 
+{
+    _server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send(*_fs, "/remote/index.html", "text/html", false);
     });
-    
-    _server->serveStatic("/", LittleFS, "/remote/");
+
+     _server->serveStatic("/", *_fs, "/remote/");
 }

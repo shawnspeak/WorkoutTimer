@@ -1,6 +1,8 @@
 #ifndef RemoteWebServer_h
 #define RemoteWebServer_h
 
+#include <LittleFS.h>
+
 #if defined(ESP8266)
 #include <ESPAsyncWebServer.h>
 #endif
@@ -13,13 +15,12 @@
 
 class RemoteWebServer {
     public:
-        RemoteWebServer(AsyncWebServer* server);
+        RemoteWebServer(AsyncWebServer* server, FS* fs);
 
         void init();
 
-        //void update();
-
     private:
+        FS* _fs;
         AsyncWebServer* _server;
 };
 
