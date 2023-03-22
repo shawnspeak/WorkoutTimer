@@ -33,6 +33,25 @@ String readFile(fs::FS &fs, const char * path){
   return fileContent;
 }
 
+// Read File from LittleFS
+String readEntireFile(fs::FS &fs, const char * path){
+  Serial.printf("Reading file: %s\r\n", path);
+
+  File file = fs.open(path, "r");
+  if(!file || file.isDirectory()){
+    Serial.println("- failed to open file for reading");
+    return String();
+  }
+
+  String fileContent;
+  while(file.available()){
+    fileContent = file.readString();
+    break;
+  }
+  file.close();
+  return fileContent;
+}
+
 // Write file to LittleFS
 void writeFile(fs::FS &fs, const char * path, const char * message){
   Serial.printf("Writing file: %s\r\n", path);
@@ -57,7 +76,7 @@ bool WiFiManager::initWiFi() {
     return false;
   }
 
-  WiFi.mode(WIFI_STA);
+  // WiFi.mode(WIFI_STA);
   WiFi.begin(_ssid.c_str(), _pass.c_str());
 
   Serial.println("Connecting to WiFi...");
@@ -103,10 +122,11 @@ bool WiFiManager::init() {
     // Route for root / web page
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.print("Requesting config root");
-        request->send(LittleFS, "/wifi-manager/index.html", "text/html", false);
+        String file = readEntireFile(LittleFS, "/wifi-manager/index.html");
+        request->send(200, "text/html", file);
     });
     
-    _server->serveStatic("/", LittleFS, "/wifi-manager/");
+    // _server->serveStatic("/", LittleFS, "/wifi-manager/");
 
     _server->on("/", HTTP_POST, [this](AsyncWebServerRequest *request) {
       int params = request->params();
@@ -146,6 +166,9 @@ bool WiFiManager::init() {
 void WiFiManager::update() {
   if (_restart){
     delay(5000);
+
+    #if defined(ESP8266)
     ESP.restart();
+    #endif
   }
 }

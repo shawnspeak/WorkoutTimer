@@ -8,6 +8,8 @@ WebsocketServer::WebsocketServer(AsyncWebServer* server) {
     _ws = new AsyncWebSocket("/ws");
 }
 
+AsyncWebSocketClient * globalClient = NULL;
+
 // buffers for command messages and arguments
 createSafeString(stringBuffer, 50);
 createSafeString(command, 10);
@@ -27,8 +29,14 @@ void WebsocketServer::notifyClients() {
         _frame->displayTime[TIME_HOURS],
         _frame->displayTime[TIME_MINUTES],
         _frame->displayTime[TIME_SECONDS]);
-
-    _ws->textAll(statusBuffer.c_str());
+        
+      for (const auto& c : _ws->getClients())
+      {
+        if (c->status() == WS_CONNECTED)
+        {
+          c->text(statusBuffer.c_str());
+        }
+      }
   }
 }
 
@@ -96,6 +104,11 @@ void WebsocketServer::handleWebSocketMessage(void *arg, uint8_t *data, size_t le
   }
 }
 
+void handleRoot(AsyncWebServerRequest *request)
+{
+	request->send(200, "text/text", "hello");
+}
+
 void WebsocketServer::init(WorkoutTimer& timer, TimerFrame& frame) {
   _last = millis();
   _frame = &frame;
@@ -103,29 +116,40 @@ void WebsocketServer::init(WorkoutTimer& timer, TimerFrame& frame) {
   _ws->onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch (type) {
       case WS_EVT_CONNECT:
-        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-        notifyClients();
+        Serial.printf("WebSocket client #%u connected from %s. Core: ", client->id(), client->remoteIP().toString().c_str());
+        Serial.println(get_core_num());
+        globalClient = client;
+        // notifyClients();
         break;
       case WS_EVT_DISCONNECT:
-        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+        Serial.printf("WebSocket client #%u disconnected. Core: ", client->id());
+        Serial.println(get_core_num());
+        globalClient = NULL;
         break;
       case WS_EVT_DATA:
+          Serial.printf("WebSocket client #%u Data. Core: ", client->id());
+          Serial.println(get_core_num());
           handleWebSocketMessage(arg, data, len);
           break;
       case WS_EVT_PONG:
       case WS_EVT_ERROR:
+      default:
+       Serial.printf("WebSocket event");
       break;
     }
   });
   _server->addHandler(_ws);
+  // _server->on("/", handleRoot);
 }
 
 void WebsocketServer::update() {
-    _ws->cleanupClients();
-
     // push a status update out to the clients every 5 seconds
     if (_last + 5000 < millis()) {
       _last = millis();
-      notifyClients();
+      if (_ws->count() > 0) {
+        notifyClients();
+        // Serial.printf("Websocket Server Update. Core: ");
+        // Serial.println(get_core_num());
+      }
     }
 }

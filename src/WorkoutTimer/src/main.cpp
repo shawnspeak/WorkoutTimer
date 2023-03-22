@@ -23,12 +23,12 @@ WiFiManager wifiManager(&server);
 WebsocketServer socketServer(&server);
 
 // Web server to host remote control
-RemoteWebServer remoteServer(&server);
+RemoteWebServer* remoteServer = new RemoteWebServer(&server, &LittleFS);
 
 void setup() {
   // start serial
   Serial.begin(115200);
-  Serial.println();
+  Serial.println("Hello");
 
   // init filesystem
   if (!LittleFS.begin()) {
@@ -52,7 +52,7 @@ void setup() {
 
     // init the remote and socket server
     socketServer.init(workoutTimer, timerFrame);
-    remoteServer.init();
+    remoteServer->init();
 
     // start the webserver
     server.begin();

@@ -55,7 +55,7 @@ void WorkoutTimer::reset() {
     _intervals = 0;
     _totalSeconds = 0;
 
-    // countdown can remain
+    _countdown = 10;
 }
 
 void WorkoutTimer::setEmom(uint8_t intervals, uint32_t intervalSeconds) {
@@ -112,13 +112,25 @@ void millisecondsToTime(uint64_t milliseconds, uint8_t time[]) {
 
 uint8_t WorkoutTimer::determineInterval(uint64_t milliseconds) {
     // determine consumed time
-    uint64_t consumed = milliseconds - _start;
+    uint64_t consumed = milliseconds - (_start + (_countdown * 1000));
     return (consumed / 1000) / _totalSeconds;
 }
 
 bool WorkoutTimer::isRunComplete(uint64_t at) {
     // what milliseconds would "complete" be?
-    return (at > (_start + (_intervals * _totalSeconds * 1000)));
+    return (at > (_start + (_intervals * _totalSeconds * 1000) + (_countdown * 1000)));
+}
+
+bool WorkoutTimer::isInCountdown(uint64_t at) {
+    // are we in countdown at.. add 1 second to include "zero" to second number 1 of an interval
+    return (at < (_start + ((_countdown + 1) * 1000)));
+}
+
+int8_t WorkoutTimer::determineCountdown(uint64_t at) {
+    if (!isInCountdown(at))
+        return -1;
+
+    return  _countdown - ((((at - _start) % 3600000) % 60000) / 1000);
 }
 
 void WorkoutTimer::determineDisplay(uint64_t milliseconds, uint8_t time[]) {
@@ -128,7 +140,7 @@ void WorkoutTimer::determineDisplay(uint64_t milliseconds, uint8_t time[]) {
     }
 
     // determine consumed time
-    uint64_t consumed = milliseconds - _start;
+    uint64_t consumed = milliseconds - (_start + (_countdown * 1000));
     uint64_t intervalMilliseconds = (_totalSeconds * 1000);
     uint8_t currentInterval = determineInterval(milliseconds);
 
@@ -167,7 +179,7 @@ void WorkoutTimer::advance(uint64_t now, TimerFrame& frame) {
 
     // additional pass the settings we would like to display
     frame.intervals = _intervals;
-    frame.countdown = _countdown;
+    frame.countdown = -1; // default to no countdown
     secondsToTime(_totalSeconds, frame.intervalTime);
 
     // now fill out the rest based on state
@@ -186,9 +198,17 @@ void WorkoutTimer::advance(uint64_t now, TimerFrame& frame) {
             break;
 
         case TIMER_STATE_RUN:
-            // check if we are complete, 
-            if (!isRunComplete(now)) {
+            // are we in countdown
+            if (isInCountdown(now)) {
+                frame.interval = 1; 
+                secondsToTime(_totalSeconds, frame.displayTime);
+                frame.countdown = determineCountdown(now);
+                break;
+            } else if (!isRunComplete(now)) {
+                // check if we are complete, 
+
                 // in run, we display is ocurring
+                frame.countdown = -1; // not counting down
                 frame.interval = determineInterval(now) + 1;
                 determineDisplay(now, frame.displayTime);
                 break;
